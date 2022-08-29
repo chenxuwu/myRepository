@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "name": "spring.datasource",
+      "type": "com.wufang.domain.serverProperties",
+      "sourceType": "com.wufang.domain.serverProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "spring.datasource.driverclassname",
+      "type": "java.lang.String",
+      "sourceType": "com.wufang.domain.serverProperties"
+    },
+    {
+      "name": "spring.datasource.password",
+      "type": "java.lang.String",
+      "sourceType": "com.wufang.domain.serverProperties"
+    },
+    {
+      "name": "spring.datasource.type",
+      "type": "java.lang.String",
+      "sourceType": "com.wufang.domain.serverProperties"
+    },
+    {
+      "name": "spring.datasource.url",
+      "type": "java.lang.String",
+      "sourceType": "com.wufang.domain.serverProperties"
+    },
+    {
+      "name": "spring.datasource.username",
+      "type": "java.lang.String",
+      "sourceType": "com.wufang.domain.serverProperties"
+    }
+  ],
+  "hints": []
+}

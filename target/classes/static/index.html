@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>五方小屋</title>
+    <!-- 开发环境版本，包含了有帮助的命令行警告 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.9/dist/vue.js"></script>
+    <script>Vue.config.productionTip = false</script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- 引入组件库 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+    <!--axios-->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <link rel="stylesheet" href="css/index.css">
+
+    <link rel="shortcut icon" href="img/favicon.ico">
+</head>
+<body>
+<div id="app">
+
+    <!--表头查询组件-->
+    <el-form :inline="true" :model="formInline" class="demo-form-inline">
+        <el-form-item label="状态">
+            <el-select v-model="formInline.state" placeholder="在职状态">
+                <el-option label="在职" value="0"></el-option>
+                <el-option label="离职" value="1"></el-option>
+            </el-select>
+        </el-form-item>
+        <el-form-item label="编号">
+            <el-input v-model="formInline.sid" placeholder="员工编号"></el-input>
+        </el-form-item>
+        <el-form-item label="姓名">
+            <el-input v-model="formInline.sname" placeholder="员工姓名"></el-input>
+        </el-form-item>
+
+        <el-form-item>
+            <el-button type="primary" @click="getAll">查询</el-button>
+        </el-form-item>
+
+        <el-form-item>
+        <el-button type="primary" plain @click="resetdatalist">
+            <i class="el-icon-s-home"></i>&nbsp;首页</el-button>
+        </el-form-item>
+    </el-form>
+
+    <!--批量删除和新增按钮-->
+    <el-row>
+
+        <el-button type="primary"
+                   plain
+                   :disabled="multipleSelection.length === 0"
+                   @click="handleDeleteBatch">
+            <i class="el-icon-delete"></i>&nbsp;批量删除
+        </el-button>
+        <el-button type="danger" plain @click="handleCreate"><i class="el-icon-circle-plus-outline"></i>&nbsp;新增
+        </el-button>
+    </el-row>
+
+    <!--新增员工弹窗-->
+    <el-dialog
+            title="新增员工"
+            :visible.sync="dialogFormVisible"
+            width="30%">
+        <el-form :model="formData" :rules="rules" ref="formData" label-width="100px" class="demo-ruleForm">
+            <el-form-item label="姓名" prop="name">
+                <el-input v-model="formData.name"></el-input>
+            </el-form-item>
+            <el-form-item label="电话" prop="tel">
+                <el-input v-model="formData.tel"></el-input>
+            </el-form-item>
+            <el-form-item label="在职状态" prop="deleted">
+                <el-switch v-model="value1" disabled></el-switch>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="handleAdd">添加</el-button>
+                <el-button @click="resetForm">重置</el-button>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+    <el-button @click="cancel">取 消</el-button>
+  </span>
+    </el-dialog>
+
+
+    <!--页面表格数据-->
+    <el-table
+            :data="datalist"
+            style="width: 100%"
+            stripe
+            border
+            max-height="700"
+            @selection-change="handleSelectionChange">
+        <el-table-column
+                type="selection"
+                width="55">
+        </el-table-column>
+        <el-table-column
+                type="index"
+                fixed
+                :index="hIndex"
+                label="序号"
+                width="50">
+
+        </el-table-column>
+        <el-table-column
+                prop="id"
+                label="编号"
+                align="center">
+        </el-table-column>
+        <el-table-column
+                prop="name"
+                label="姓名"
+                align="center">
+        </el-table-column>
+
+        <el-table-column
+                prop="tel"
+                label="电话"
+                align="center">
+        </el-table-column>
+        <el-table-column
+                prop="deleted"
+                align="center"
+                label="在职状态">
+        </el-table-column>
+        <el-table-column
+                label="操作"
+                align="center">
+            <template slot-scope="scope"> <!--element将整个行对象封装成scope-->
+                <el-button type="primary" size="mini" @click="handleUpdate(scope.row)">修改</el-button>
+                <el-button type="warning" size="mini" @click="handleDelete(scope.row)">删除</el-button>
+            </template>
+        </el-table-column>
+
+        <!--修改员工弹窗-->
+        <el-dialog
+                title="修改信息"
+                :visible.sync="dialog"
+                :append-to-body="true"
+                width="30%">
+            <el-form :model="formData" :rules="rules" ref="formData" label-width="100px" class="demo-ruleForm">
+                <el-form-item label="姓名" prop="name">
+                    <el-input v-model="formData.name"></el-input>
+                </el-form-item>
+                <el-form-item label="电话" prop="tel">
+                    <el-input v-model="formData.tel"></el-input>
+                </el-form-item>
+                <el-form-item label="在职状态" prop="deleted">
+                    <el-switch v-model="value1"></el-switch>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="handleEdit">修改</el-button>
+                    <el-button @click="resetForm">重置</el-button>
+                </el-form-item>
+            </el-form>
+            <span slot="footer" class="dialog-footer">
+    <el-button @click="cancel">取 消</el-button>
+  </span>
+        </el-dialog>
+
+        <!--未查到数据样式-->
+        <div slot="empty" style="text-align: left;">
+            <el-empty description="暂无数据！"/>
+        </div>
+
+    </el-table>
+
+    <!--分页-->
+    <div class="pagination-container" style="text-align: right">
+        <el-pagination
+                class="pagination"
+                @current-change="handleCurrentChange"
+                :current-page="pagination.currentPage"
+                :page-size="pagination.pageSize"
+                layout="total,prev, pager, next, jumper"
+                :total="pagination.total">
+
+        </el-pagination>
+    </div>
+
+
+</div>
+</body>
+<script>
+    new Vue({
+        el: "#app",
+
+        //data
+        data: {
+            value1: true,
+            value2: false,
+
+            datalist: [],//当前页要展示的数据
+            dialogFormVisible: false,//新增对话框是否显示
+            dialog: false,//修改对话框是否显示
+            formData: {},//表单数据
+            multipleSelection: [],//复选框
+            formInline: { //表头查询
+                state: '',
+                sid: '',
+                sname: ''
+            },
+
+            //新增员工规则
+            rules: {
+                name: [
+                    {required: true, message: '请输入您的姓名', trigger: 'blur'},
+                    {min: 2, max: 20, message: '必须两个汉字以上', trigger: 'blur'}
+                ],
+                tel: [
+                    {required: true, message: '请输入您的电话', trigger: 'blur'},
+                    {min: 5, max: 11, message: '请输入合法的号码', trigger: 'blur'}
+                ]
+            },
+
+            //分页相关模型数据 "total, sizes, prev, pager, next, jumper"
+            pagination: {
+                total: 0,//总条数
+                pageSize: 10,//每页条数
+                currentPage: 1//当前页码
+                // next:,
+                // jumper:
+            }
+
+        },
+
+//       一、生命周期钩子函数
+// 　　（1）beforeCreate（）       实例创建前触发
+// 　　（2）created（）                实例创建完成，
+//   （3）beforeMount（）        模板渲染前，可以访问数据，模板编译完成，虚拟DOM已经存在
+// 　　（4）mounted（）              模板渲染完成，可以拿到DOM节点和数据
+// 　　（5）beforeUpdate（）      更新前
+// 　　（6）updated（）               更新完成
+// 　　（7）activated（）         　 激活前
+// 　　（8）deactivated（）         激活后
+// 　　（9）beforeDestroy（）　 销毁前
+// 　　（10）destroyed（）　　  销毁后
+
+        //钩子函数，Vue对象初始化完成后自动执行
+        created() {
+            this.getAll();//调用查询全部的数据操作
+        },
+
+
+        methods: {
+
+            //序号累加
+            hIndex(index) {
+                //     当前序号 + ( 当前页数 - 1 ) * 每页条数 + 1
+                return index + ((this.pagination.currentPage - 1) * this.pagination.pageSize) + 1
+            },
+
+            //获取列表 + 分页展示
+            getAll() {
+                param = "?id="+this.formInline.sid;
+                param +="&name="+this.formInline.sname;
+                param +="&deleted="+this.formInline.state;
+
+                axios.get("/infos/" + this.pagination.currentPage + "/" + this.pagination.pageSize+param).then((res) => {
+                    this.datalist = res.data.data.records;  //当前页面数据
+                    this.pagination.currentPage = res.data.data.current;  //当前页
+                    this.pagination.pageSize = res.data.data.size;  //每页条数
+                    this.pagination.total = res.data.data.total;  //总条数
+                });
+            },
+
+            //查询按钮
+            // onSubmit() {
+            //     axios.post("infos/query",this.formInline).then((res)=>{
+            //         console.log(this.formInline);
+            //         this.datalist = res.data.data;
+            //     }).finally(()=>{
+            //         this.getAll();
+            //     });
+            // },
+
+            //切换页码
+            handleCurrentChange(currentPage) {
+                //修改页码值为当前选中的页码值
+                this.pagination.currentPage = currentPage;
+                //获取列表
+                this.getAll();
+
+            },
+
+            //复选框选中执行的方法
+            handleSelectionChange(val) {
+                this.multipleSelection = val;
+            },
+
+            //弹出添加窗口
+            handleCreate() {
+                this.dialogFormVisible = true;
+                this.resetForm();
+            },
+
+            //添加提交
+            handleAdd() {
+                axios.post("/infos", this.formData).then((res) => {
+                    //判断是否添加成功
+                    if (res.data.code == 20001) {
+                        //关掉弹窗
+                        this.dialogFormVisible = false;
+
+                        //弹出交互信息
+                        this.$message.success(res.data.msg);
+                    } else {
+                        this.$message.error(res.data.msg);
+                    }
+                }).finally(() => {
+                    //无论成功或失败都要重新刷新列表
+                    this.getAll();
+                });
+            },
+
+            //重置表单
+            resetForm() {
+                this.formData = {};
+            },
+
+            //主页按钮
+            resetdatalist() {
+                axios.get("/infos/" + this.pagination.currentPage + "/" + this.pagination.pageSize).then((res) => {
+                    this.datalist = res.data.data.records;  //当前页面数据
+                    this.pagination.currentPage = res.data.data.current;  //当前页
+                    this.pagination.pageSize = res.data.data.size;  //每页条数
+                    this.pagination.total = res.data.data.total;  //总条数
+                });
+            },
+
+            //取消
+            cancel() {
+                this.dialogFormVisible = false;
+                this.dialog = false;
+                this.$message.info("取消操作");
+            },
+
+            //删除
+            handleDelete(row) {
+                this.$confirm("此操作永久删除信息，请问是否继续？", "提示", {type: 'info'}).then(() => {
+                    //确定删除
+                    axios.delete("/infos/" + row.id).then((res) => {
+                        if (res.data.code == 20001) {
+                            this.$message.success(res.data.msg);
+                        } else {
+                            this.$message.error("数据同步失败，自动刷新");
+                        }
+                    }).finally(() => {
+                        this.getAll();//刷新数据
+                    });
+                }).catch(() => {
+                    //取消删除
+                    this.$message.info("取消删除操作");
+                });
+
+            },
+
+            //批量删除
+            handleDeleteBatch() {
+                this.$confirm("此操作永久删除信息，请问是否继续？", "提示", {type: 'info'}).then(() => {
+                    var ids = [];
+                    this.multipleSelection.forEach(row => ids.push(row.id));
+                    axios.post("/infos/delBatch", ids).then((res) => {
+                        if (res.data.code == 20001) {
+                            this.$message.success(res.data.msg);
+                        } else {
+                            this.$message.error("数据同步失败，自动刷新");
+                        }
+                    }).finally(() => {
+                        this.getAll();//刷新数据
+                    });
+                }).catch(() => {
+                    //取消删除
+                    this.$message.info("取消批量删除操作");
+                });
+
+            },
+
+            //修改弹窗展示
+            handleUpdate(row) {
+                this.dialog = true;
+                axios.get("/infos/" + row.id).then((res) => {
+                    if (res.data.code == 20001) {
+                        this.formData = res.data.data;
+                    } else {
+                        this.$message.error("数据同步失败，自动刷新");
+                    }
+                }).finally(() => {
+                    this.getAll();//刷新数据
+                });
+            },
+
+            //修改弹窗数据提交
+            handleEdit() {
+                axios.put("/infos", this.formData).then((res) => {
+                    if (res.data.code == 20001) {
+                        this.dialog = false;
+                        this.$message.success(res.data.msg);
+                    } else {
+                        this.$message.error("数据同步失败，自动刷新");
+                    }
+                }).finally(() => {
+                    this.getAll();//刷新数据
+                });
+            },
+
+        }
+    })
+</script>
+</html>
